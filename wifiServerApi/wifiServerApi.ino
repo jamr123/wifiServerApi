@@ -58,18 +58,14 @@ void connectWiFiAP(String confSsid, String confPassword, String confHostName) {
 
 void serverRoutes() {
 
-
-
   server.on("/power", HTTP_POST, power);
   server.on("/wifiConnect", HTTP_POST, wifiConnect);
   server.on("/wifiUpdate", HTTP_POST, wifiUpdate);
-
   server.on("/powerStatus", HTTP_GET, powerStatus);
   server.on("/wifiReset", HTTP_GET, wifiReset);
   server.on("/getConfig", HTTP_GET, getConfig);
   server.on("/", HTTP_GET, handleRoot);
   server.onNotFound(handleNotFound);
-
   server.begin();
   Serial.println("HTTP server started");
 

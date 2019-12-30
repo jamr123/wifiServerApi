@@ -1,0 +1,36 @@
+POST
+
+192.168.4.10/power?token=token12345&status=0     
+status=0  OFF 
+status=1  ON   
+return={'result':0} {'result':1} {'result':'Token not valid'} {'result':'Not status'}
+
+192.168.4.10/wifiConnect?newcode=1234&newpassword=12345678&newssid=nuevared&newnamehost=led
+newcode= 4-8 number 
+newssid= max 32 no spaces
+newpassword= min 8 char
+newhostname= max 32 alpha numberic no spaces
+return= {'result':'OK'} {'result':'Not function'}
+
+
+192.168.4.10/wifiUpdate?code=1234&newpassword=12345678&newssid=nuevaredupdate&newnamehost=led
+code= registered code
+newssid= max 32 no spaces
+newpassword= min 8 char
+newhostname= max 32 alpha numberic no spaces
+return= {'result':'OK'} {'result':'Invalid code'}
+
+192.168.4.10/updateLights
+
+GET
+
+192.168.4.10/powerStatus?token=token12345
+result=0  OFF 
+result=1  ON   
+return={'result':0} {'result':1} {'result':'Token not valid'} 
+
+192.168.4.10/wifiReset?code=1234
+return= {'result':'OK'} {'result':'Invalid code'}
+
+192.168.4.10/getConfig
+

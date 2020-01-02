@@ -1,0 +1,17 @@
+{ 
+   "count":30,
+   "bright":100,
+   "numberGroups":2,
+   "numberLedsGroups":[2,3],
+   "groups":[ 
+             
+      [ [ [ 123, 231, 255 ],[ 121, 233, 255]],[1, 2]],
+
+      [ [ [ 123, 231, 255 ], [ 121, 233, 255], [ 121,233,255]],[  3, 4, 5 ]]
+           
+            ]
+}
+
+
+// groups 
+//[[[R,G,B],[R,G,B]],[led number in wire,led number in wire]]

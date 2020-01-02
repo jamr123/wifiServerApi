@@ -2,38 +2,57 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
-
+#include <ArduinoJson.h>
+#include <FastLED.h>
 
 ESP8266WebServer server(80);
 
 String ssid = "Lighting_Controller";
 String password = "led12345";
-String hostName = "wifiled";
+String hostName = "host";
 String code = "0000";
 String tokenServer = "token12345";
 String tokenCliente = "";
 String statusPower = "0";
-String urlServerConf="http://192.168.4.66/conf";
-
+String ipHost="192.168.4.66";
 int s1 = 2;
 
+unsigned long count=0;
+int bright=0;
+int numberGroups=0;
+
+
+#define NUM_LEDS 200
+#define DATA_PIN 3
+CRGB leds[NUM_LEDS];
+
+DynamicJsonDocument doc(1024);
+
+
+unsigned long previousMillis = 0;
+unsigned long interval = 1000;
+
+
 void setup() {
+
+  FastLED.addLeds<WS2812, DATA_PIN, RGB>(leds, NUM_LEDS);
   pinMode(s1, OUTPUT);
   digitalWrite(s1, HIGH);
 
   Serial.begin(115200);
   Serial.println("   ");
-  connectWiFiAP(ssid, password, hostName);
+  connectWiFiAP(ssid, password);
   serverRoutes();
 }
 
 void loop() {
 
-  server.handleClient();
+  
+  ledsLoop();
 
 }
 
-void connectWiFiAP(String confSsid, String confPassword, String confHostName) {
+void connectWiFiAP(String confSsid, String confPassword) {
   IPAddress local_IP(192,168,4,10);
   IPAddress gateway(192,168,4,1);
   IPAddress subnet(255,255,255,0);
@@ -42,7 +61,6 @@ void connectWiFiAP(String confSsid, String confPassword, String confHostName) {
   WiFi.mode(WIFI_OFF);
   delay(1000);
   WiFi.mode(WIFI_AP);
-  WiFi.hostname(confHostName);
   
   delay(100);
   Serial.print("Setting soft-AP configuration ... ");
@@ -130,7 +148,7 @@ void wifiConnect() {
 
   String newSsid = server.arg(String("newssid")) ;
   String newPassword  = server.arg(String("newpassword")) ;
-  String newHostName = server.arg(String("newnamehost"));
+  hostName = server.arg(String("newnamehost"));
   String newCode = server.arg(String("newcode"));
 
   if (code == "0000") {
@@ -138,7 +156,7 @@ void wifiConnect() {
     code = newCode;
     server.send(200, "text/plain", "{'result':'OK'}");
     delay(3000);
-    connectWiFiAP(newSsid, newPassword, newHostName);
+    connectWiFiAP(newSsid, newPassword);
 
 
   }
@@ -153,13 +171,13 @@ void wifiUpdate() {
 
   String newSsid = server.arg(String("newssid")) ;
   String newPassword  = server.arg(String("newpassword")) ;
-  String newHostName = server.arg(String("newnamehost"));
+  hostName = server.arg(String("newnamehost"));
   String newCode = server.arg(String("code"));
 
   if (code == newCode) {
     server.send(200, "text/plain", "{'result':'OK'}");
     delay(3000);
-    connectWiFiAP(newSsid, newPassword, newHostName);
+    connectWiFiAP(newSsid, newPassword);
 
 
   }
@@ -179,7 +197,7 @@ void wifiReset() {
     code = "0000";
     server.send(200, "text/plain", "{'result':'OK'}");
     delay(3000);
-    connectWiFiAP(ssid, password, hostName);
+    connectWiFiAP(ssid, password);
 
 
   }
@@ -190,19 +208,99 @@ void wifiReset() {
 }
 
 void getConfig() {
-  
-   String jsonSend="{\"data\":\"data\"}";
+    
+   
+   String payload="";
    HTTPClient http;  
  
-   http.begin(urlServerConf);     
-   http.addHeader("Content-Type", "application/json"); 
+    http.begin("http://"+ipHost+"/activeConfig/?id="+hostName); 
+    int httpCode = http.GET();                                                           
+
+    if (httpCode > 0) { 
+       payload= http.getString();   
+      Serial.println(payload);                 
+      server.send(200, "text/plain", payload);
+    }
+    http.end();  
+
+    if(payload!=""){
+      
+      char payloadChar[payload.length()];
+      payload.toCharArray(payloadChar, payload.length());
+      DeserializationError error = deserializeJson(doc,payloadChar);
+
+      
+      if (error) {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.c_str());
+        return;
+      }
+
+       deserializeJson(doc, payloadChar);
+
+      count = doc["count"];
+      bright = doc["bright"]; 
+      numberGroups = doc["numberGroups"]; 
+
+      interval= count;
+      
+      
+      }
+ 
+  }
+
+ void ledsLoop(){
+  
+  
+ server.handleClient();
+
+         if(numberGroups>0){
+             int i=0;
+             int j=0;
+             
+
+             while(i<numberGroups){
+              server.handleClient();
+             int numberLedsGroups=doc["numberLedsGroups"][i];
+             unsigned long currentMillis = millis();
+             JsonArray groups = doc["groups"];
+             
+              while(j<numberLedsGroups){
+                server.handleClient();
+               
+                if (currentMillis - previousMillis >= interval) { 
+                   
+                   JsonArray colors = doc["groups"][i][0][j];
+                   int ledsIn= doc["groups"][i][1][j];
+                   int R=colors[0];
+                   int G=colors[1];
+                   int B=colors[2];
+                      leds[ledsIn] = CHSV(0,0,0);
+                      FastLED.show();
+                      leds[ledsIn] = CHSV(R, G, B);
+                      FastLED.show();
+                      
+                   j++;
+                  
+                  
+                  }
+
+                  
+                
+                }
+              i++;
+      
+             }
+          
+          
+          }
+
+       
+      // if (currentMillis - previousMillis >= interval) { }
    
-   int httpCode = http.POST(jsonSend);  
-   String payload = http.getString();                
- 
-   Serial.println(httpCode);   
-   Serial.println(payload);    
- 
-   http.end();
- 
+   //JsonArray colors = doc["groups"][i][0][j];
+  //int leds= doc["groups"][i][1][j];
+   
+  
+  
   }
